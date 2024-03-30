@@ -30,7 +30,7 @@ fn setup_marquise(map: &mut game_state::Map) {
 
     println!("you chose: {}", corner);
 
-    map.place_keep(NodeIndex::new(corner));
+    map.place_keep(NodeIndex::new(*corners.get(corner).unwrap()));
     print_clearings(map, map.get_clearings());
 }
 
