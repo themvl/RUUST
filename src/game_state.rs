@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{collections::HashMap, path::Display};
+use std::{collections::HashMap, iter, path::Display};
 
 use itertools::{concat, Itertools};
 use petgraph::{
@@ -245,6 +245,7 @@ impl Map {
 
     pub fn get_marquise_start_building_options(&self) -> impl Iterator<Item = NodeIndex<u8>> + '_ {
         self.get_connected(self.keep.unwrap())
+            .chain(iter::once(self.keep.unwrap()))
             .filter(|x| self.get_clearing(*x).buildable())
     }
 
