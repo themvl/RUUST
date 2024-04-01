@@ -155,6 +155,7 @@ dependencies = [
 name = "root-game"
 version = "0.1.0"
 dependencies = [
+ "console",
  "dialoguer",
  "itertools",
  "petgraph",

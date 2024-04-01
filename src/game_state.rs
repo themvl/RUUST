@@ -1,9 +1,11 @@
-use std::collections::HashMap;
+use core::fmt;
+use std::{collections::HashMap, path::Display};
 
-use itertools::Itertools;
+use itertools::{concat, Itertools};
 use petgraph::{
+    data::DataMap,
     graph::{Neighbors, NodeIndex},
-    visit::{EdgeIndexable, IntoNodeIdentifiers},
+    visit::{EdgeIndexable, IntoNodeIdentifiers, NodeIndexable},
     Graph, Undirected,
 };
 
@@ -17,7 +19,7 @@ pub enum Suit {
 }
 
 #[derive(PartialEq, Eq, Hash, Debug)]
-pub enum Player {
+pub enum Faction {
     Marquise,
     Eyrie,
     None,
@@ -29,20 +31,21 @@ pub enum Token {
     Keep,
 }
 
-enum Structure {
+pub enum Structure {
     Recruiter,
     Sawmill,
     Workshop,
+    Roost,
 }
 
 pub struct Clearing {
     pub suit: Suit,
-    structures: Vec<Structure>,
+    pub structures: Vec<Structure>,
     pub build_spots: u8,
-    pub warriors: HashMap<Player, u8>,
+    pub warriors: HashMap<Faction, u8>,
     pub tokens: HashMap<Token, u8>,
     corner: bool,
-    rule: Player,
+    rule: Faction,
 }
 
 pub enum MapType {
@@ -59,6 +62,7 @@ pub struct Map {
     graph: Graph<Clearing, (), Undirected, u8>,
     corners: HashMap<NodeIndex<u8>, NodeIndex<u8>>,
     keep_placed: bool,
+    keep: Option<NodeIndex<u8>>,
 }
 
 pub struct Corner {
@@ -168,6 +172,11 @@ impl Map {
     }
 
     pub fn place_keep(&mut self, index: NodeIndex<u8>) {
+        // check if index is corner
+        if !self.corners.contains_key(&index) {
+            panic!("illigal move!")
+        }
+
         // place keep token
         self.graph
             .node_weight_mut(index)
@@ -175,11 +184,13 @@ impl Map {
             .tokens
             .insert(Token::Keep, 1);
 
+        self.keep = Some(index);
+
         // find opposite corner and get every clearing except this one
         let opposite = self.corners.get(&index).unwrap().to_owned();
         for clearing in self.graph.node_identifiers() {
             if clearing != opposite {
-                self.place_warrior(clearing, Player::Marquise, 1);
+                self.place_warrior(clearing, Faction::Marquise, 1);
             }
         }
     }
@@ -188,7 +199,7 @@ impl Map {
         self.graph.node_indices().collect_vec()
     }
 
-    pub fn place_warrior(&mut self, index: NodeIndex<u8>, warrior: Player, amount: u8) {
+    pub fn place_warrior(&mut self, index: NodeIndex<u8>, warrior: Faction, amount: u8) {
         self.graph
             .node_weight_mut(index)
             .unwrap()
@@ -203,11 +214,48 @@ impl Map {
         self.corners.insert(opposite, corner);
     }
 
-    fn place_structure(&mut self, index: NodeIndex<u8>, structure: Structure) {
+    pub fn place_structure(&mut self, index: NodeIndex<u8>, structure: Structure) {
         let clearing = self.graph.node_weight_mut(index).unwrap();
-        if usize::from(clearing.build_spots) < clearing.structures.len() {
+        if clearing.buildable() {
             clearing.structures.push(structure);
         }
+    }
+
+    pub fn setup_eyrie(&mut self, corner: NodeIndex<u8>) {
+        // check if corner is allowed
+        if !self.corners.contains_key(&corner) {
+            panic!("not a corner!")
+        }
+        if self
+            .graph
+            .node_weight(corner)
+            .unwrap()
+            .tokens
+            .contains_key(&Token::Keep)
+        {
+            panic!("corner with keep already placed")
+        }
+
+        // place a roost
+        self.place_structure(corner, Structure::Roost);
+
+        // place 6 warriors
+        self.place_warrior(corner, Faction::Eyrie, 6);
+    }
+
+    pub fn get_marquise_start_building_options(&self) -> impl Iterator<Item = NodeIndex<u8>> + '_ {
+        self.get_connected(self.keep.unwrap())
+            .filter(|x| self.get_clearing(*x).buildable())
+    }
+
+    pub fn get_eyrie_start_options(&self) -> impl Iterator<Item = &NodeIndex<u8>> + '_ {
+        self.get_corners().into_iter().filter_map(|x| {
+            if !self.get_clearing(*x.0).tokens.contains_key(&Token::Keep) {
+                Some(x.0)
+            } else {
+                None
+            }
+        })
     }
 }
 
@@ -220,7 +268,7 @@ impl Default for Clearing {
             warriors: HashMap::with_capacity(4),
             tokens: HashMap::with_capacity(4),
             corner: false,
-            rule: Player::None,
+            rule: Faction::None,
         }
     }
 }
@@ -231,6 +279,13 @@ impl Default for Map {
             graph: Graph::<Clearing, (), Undirected, u8>::default(),
             corners: HashMap::new(),
             keep_placed: false,
+            keep: None,
         }
+    }
+}
+
+impl Clearing {
+    pub fn buildable(&self) -> bool {
+        usize::from(self.build_spots) > self.structures.len()
     }
 }
