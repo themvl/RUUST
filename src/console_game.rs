@@ -92,7 +92,7 @@ fn setup_eyrie(map: &mut game_state::Map, term: &Term) {
     term.clear_screen();
     print_clearings(map, map.get_clearings());
 
-    ask_to_build(
+    let first_roost = ask_to_build(
         map,
         "Where to place first roost?",
         game_state::Structure::Roost,
@@ -100,6 +100,8 @@ fn setup_eyrie(map: &mut game_state::Map, term: &Term) {
             .map(|x| x.index())
             .collect_vec(),
     );
+
+    map.place_warrior(first_roost, game_state::Faction::Eyrie, 6);
 
     term.clear_screen();
     print_clearings(map, map.get_clearings());
@@ -110,14 +112,16 @@ fn ask_to_build(
     message: &str,
     structure: game_state::Structure,
     options: Vec<usize>,
-) {
+) -> NodeIndex<u8> {
     println!("{}", message);
     let clearing = Select::new()
         .with_prompt("What do you choose?")
         .items(&options)
         .interact()
         .unwrap();
-    map.place_structure(NodeIndex::new(*options.get(clearing).unwrap()), structure);
+    let index = NodeIndex::new(*options.get(clearing).unwrap());
+    map.place_structure(index, structure);
+    index
 }
 
 fn print_clearings<I>(map: &game_state::Map, clearings: I)
@@ -150,7 +154,7 @@ impl Display for game_state::Clearing {
 
         write!(
             f,
-            "{:6} spots:{:2}({}) {:1} B:{:5}{:3} Wa {:4}",
+            "{:6} spots:{:2}({}) {:1} B:{:5}{:3} Wa {:4}{:4}",
             self.suit,
             self.build_spots,
             self.structures.len(),
@@ -169,6 +173,11 @@ impl Display for game_state::Clearing {
                 "".to_string()
             } else {
                 format!("M:{}", self.warriors.get(&Faction::Marquise).unwrap())
+            },
+            if self.warriors.get(&Faction::Eyrie).unwrap_or(&0) == &0u8 {
+                "".to_string()
+            } else {
+                format!("E:{}", self.warriors.get(&Faction::Eyrie).unwrap())
             }
         )
     }
