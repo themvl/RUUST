@@ -1,9 +1,7 @@
-use core::fmt;
-use std::{collections::HashMap, iter, path::Display};
+use std::{collections::HashMap, iter};
 
-use itertools::{concat, Itertools};
+use itertools::Itertools;
 use petgraph::{
-    data::DataMap,
     graph::{Neighbors, NodeIndex},
     visit::{EdgeIndexable, IntoNodeIdentifiers, NodeIndexable},
     Graph, Undirected,
@@ -250,7 +248,7 @@ impl Map {
     }
 
     pub fn get_eyrie_start_options(&self) -> impl Iterator<Item = &NodeIndex<u8>> + '_ {
-        self.get_corners().into_iter().filter_map(|x| {
+        self.get_corners().iter().filter_map(|x| {
             if !self.get_clearing(*x.0).tokens.contains_key(&Token::Keep) {
                 Some(x.0)
             } else {

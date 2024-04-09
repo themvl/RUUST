@@ -1,16 +1,12 @@
-use std::{fmt::Display, option};
+use std::fmt::Display;
 
-use crate::game_state::{Clearing, Corner, Faction, MapType, Suit, Token};
+use crate::game_state::{Faction, MapType, Suit, Token};
 use itertools::{join, Itertools};
 
 use super::game_state;
 use console::Term;
 use dialoguer::Select;
-use petgraph::{
-    csr::IndexType,
-    graph::{Node, NodeIndex},
-    visit::NodeRef,
-};
+use petgraph::{csr::IndexType, graph::NodeIndex};
 use std::fmt;
 
 pub fn run() {
