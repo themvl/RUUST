@@ -3,7 +3,7 @@ use std::{collections::HashMap, iter};
 use itertools::Itertools;
 use petgraph::{
     graph::{Neighbors, NodeIndex},
-    visit::{EdgeIndexable, IntoNodeIdentifiers, NodeIndexable},
+    visit::IntoNodeIdentifiers,
     Graph, Undirected,
 };
 
